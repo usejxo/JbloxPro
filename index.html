@@ -79,21 +79,27 @@
             text-align: center;
             color: #fff;
         }
-        .user-section {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
+        #loadingMessage {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            border: 1px solid #ccc;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
         }
-        .user-section .username {
-            font-size: 20px;
-            font-weight: bold;
+        #loadingBar {
+            width: 100%;
+            background-color: #f3f3f3;
         }
-        .user-section .jbux {
-            font-size: 16px;
-            color: #00ff00;
+        #loadingProgress {
+            width: 0;
+            height: 20px;
+            background-color: green;
         }
-        /* Button styles with gradient */
         button {
             background: linear-gradient(to right, #00e4ff, #007cff, #ff00ff);
             color: #fff;
@@ -119,12 +125,6 @@
         <input type="text" id="search-input" onkeyup="searchGames()" placeholder="Search for games...">
     </div>
 
-    <!-- Recently Played Section -->
-    <h2 class="section-title">Recently Played</h2>
-    <div class="game-container" id="recently-played">
-        <!-- Recently played games will be inserted here by JavaScript -->
-    </div>
-
     <!-- Recommended Section -->
     <h2 class="section-title">Recommended</h2>
     <div class="game-container" id="recommended-games">
@@ -142,7 +142,69 @@
         <p>&copy; 2024 JBlox - All rights reserved.</p>
     </div>
 
+    <!-- Loading message for updates -->
+    <div id="loadingMessage">
+        <p>Updating page, please wait...</p>
+        <div id="loadingBar">
+            <div id="loadingProgress"></div>
+        </div>
+    </div>
+
     <script>
+        const githubFileUrl = 'https://raw.githubusercontent.com/usejxo/JbloxPro/main/index.html'; // Replace with your GitHub raw file URL
+        const loadingMessage = document.getElementById('loadingMessage');
+        const loadingProgress = document.getElementById('loadingProgress');
+
+        async function fetchFileContent() {
+            try {
+                const response = await fetch(githubFileUrl);
+                const fileContent = await response.text();
+                return fileContent;
+            } catch (error) {
+                console.error('Error fetching file:', error);
+                return null;
+            }
+        }
+
+        function showLoadingBar() {
+            loadingMessage.style.display = 'block';
+            loadingProgress.style.width = '0%';
+
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 10;
+                loadingProgress.style.width = progress + '%';
+                if (progress >= 100) {
+                    clearInterval(interval);
+                }
+            }, 100);
+        }
+
+        function hideLoadingBar() {
+            setTimeout(() => {
+                loadingMessage.style.display = 'none';
+            }, 1000);
+        }
+
+        async function checkForUpdates() {
+            const newContent = await fetchFileContent();
+            if (newContent) {
+                showLoadingBar();
+                setTimeout(() => {
+                    document.open();
+                    document.write(newContent);
+                    document.close();
+                    hideLoadingBar();
+                }, 1500);
+            }
+        }
+
+        // Poll for updates every 10 seconds
+        setInterval(checkForUpdates, 10000);
+
+        // Initial load
+        checkForUpdates();
+
         // Game data
         const games = [
             { title: 'Shooter', img: 'https://jbloxi12345678910btjapifix.netlify.app/assets/installer/gamefiles/images/g1.png', link: 'https://jbg1.netlify.app/' },
@@ -155,15 +217,6 @@
             { title: 'Game 8', img: 'https://jbloxi12345678910btjapifix.netlify.app/assets/installer/gamefiles/images/nd.png', link: 'https://jbloxi12345678910btjapifix.netlify.app/assets/installer/gamefiles/gna' }
         ];
 
-        // Utility function to save recently played games in localStorage
-        function saveRecentlyPlayed(game) {
-            let recentlyPlayed = JSON.parse(localStorage.getItem('recentlyPlayed')) || [];
-            recentlyPlayed = recentlyPlayed.filter(g => g.title !== game.title);
-            recentlyPlayed.unshift(game);
-            recentlyPlayed = recentlyPlayed.slice(0, 5);
-            localStorage.setItem('recentlyPlayed', JSON.stringify(recentlyPlayed));
-        }
-
         // Function to display games in a container
         function displayGames(containerId, gameList) {
             const container = document.getElementById(containerId);
@@ -171,18 +224,12 @@
 
             gameList.forEach(game => {
                 const gameCard = `
-                    <a href="${game.link}" class="game-card" onclick="saveRecentlyPlayed(${JSON.stringify(game)})">
+                    <a href="${game.link}" class="game-card">
                         <img src="${game.img}" alt="${game.title}">
                         <div class="game-title">${game.title}</div>
                     </a>`;
                 container.innerHTML += gameCard;
             });
-        }
-
-        // Display recently played games from localStorage
-        function displayRecentlyPlayed() {
-            const recentlyPlayed = JSON.parse(localStorage.getItem('recentlyPlayed')) || [];
-            displayGames('recently-played', recentlyPlayed);
         }
 
         // Display 4 random recommended games
@@ -192,33 +239,18 @@
         // Display All Games
         displayGames('all-games', games);
 
-        // Utility function to shuffle and pick random games
-        function getRandomGames(array, num) {
-            const shuffled = array.sort(() => 0.5 - Math.random());
-            return shuffled.slice(0, num);
+        // Function to get random games
+        function getRandomGames(gameList, count) {
+            const shuffled = [...gameList].sort(() => 0.5 - Math.random());
+            return shuffled.slice(0, count);
         }
 
-        // Search Functionality
+        // Search games
         function searchGames() {
-            let input = document.getElementById('search-input').value.toLowerCase();
-            let games = document.getElementsByClassName('game-card');
-
-            for (let i = 0; i < games.length; i++) {
-                let gameTitle = games[i].getElementsByClassName('game-title')[0].innerText.toLowerCase();
-                if (gameTitle.includes(input)) {
-                    games[i].style.display = "";
-                } else {
-                    games[i].style.display = "none";
-                }
-            }
+            const searchInput = document.getElementById('search-input').value.toLowerCase();
+            const filteredGames = games.filter(game => game.title.toLowerCase().includes(searchInput));
+            displayGames('all-games', filteredGames);
         }
-
-        // Initial display of user info (this function should exist based on your logic)
-        displayUserInfo();
-
-        // Display recently played games on page load
-        displayRecentlyPlayed();
     </script>
-
 </body>
 </html>

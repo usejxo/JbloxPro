@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JBlox - Your Gaming Hub</title>
+    <title>Auto-Updating Page</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -155,6 +155,9 @@
         const loadingMessage = document.getElementById('loadingMessage');
         const loadingProgress = document.getElementById('loadingProgress');
 
+        // Store the current page content
+        let currentPageContent = document.documentElement.outerHTML;
+
         async function fetchFileContent() {
             try {
                 const response = await fetch(githubFileUrl);
@@ -188,22 +191,18 @@
 
         async function checkForUpdates() {
             const newContent = await fetchFileContent();
-            if (newContent) {
+            if (newContent && newContent !== currentPageContent) {
                 showLoadingBar();
                 setTimeout(() => {
                     document.open();
                     document.write(newContent);
                     document.close();
-                    hideLoadingBar();
                 }, 1500);
             }
         }
 
         // Poll for updates every 10 seconds
         setInterval(checkForUpdates, 10000);
-
-        // Initial load
-        checkForUpdates();
 
         // Game data
         const games = [
@@ -232,11 +231,9 @@
             });
         }
 
-        // Display 4 random recommended games
-        const recommendedGames = getRandomGames(games, 4);
+        // Display recommended games and all games
+        const recommendedGames = getRandomGames(games, 3);
         displayGames('recommended-games', recommendedGames);
-
-        // Display All Games
         displayGames('all-games', games);
 
         // Function to get random games
